@@ -2,7 +2,7 @@ const { sign } = require('jsonwebtoken');
 const crypto = require('crypto');
 
 // Clave privada (almacenada en .env)
-const privateKey = process.env.PRIVATE_KEY;
+const privateKey = "hola7196726";
 
 // Generar token firmado
 module.exports = async (req, res) => {
