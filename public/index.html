@@ -12,7 +12,7 @@
   <button onclick="simulateGame()">Ganar 10 puntos</button>
   <button onclick="showPoints()">Ver puntos</button>
   <div id="message"></div>
-  <script >
+  <script type="module" >
     // Clave pública en formato PEM (debes reemplazarla con la tuya)
 const publicKeyPem = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1...
@@ -53,7 +53,7 @@ async function verifyToken(token) {
 
 export { verifyToken };
   </script>
-  <script>
+  <script type"module">
     import { verifyToken } from './crypto.js';
 
 // Configuración de IndexedDB
