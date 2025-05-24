@@ -1,0 +1,14 @@
+{
+  "name": "secure-points-game",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2",
+    "crypto": "latest"
+  },
+  "devDependencies": {
+    "@vercel/node": "^3.0.0"
+  }
+}
