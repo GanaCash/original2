@@ -4,141 +4,134 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Juego Seguro</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <h1>Juego Seguro</h1>
   <p>Puntos actuales: <span id="points">0</span></p>
-  <button onclick="simulateGame()">Ganar 10 puntos</button>
-  <button onclick="showPoints()">Ver puntos</button>
+  <button id="gameButton">Ganar 10 puntos</button>
+  <button id="showPointsButton">Ver puntos</button>
   <div id="message"></div>
-  <script type="module" >
-    // Clave pública en formato PEM (debes reemplazarla con la tuya)
-const publicKeyPem = `-----BEGIN PUBLIC KEY-----
+  <script type="module">
+    const publicKeyPem = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1...
 -----END PUBLIC KEY-----`;
 
-// Convertir PEM a formato que Web Crypto pueda usar
-async function importPublicKey(pem) {
-  const binaryDerString = atob(pem.split('\n').slice(1, -2).join(''));
-  const binaryDer = new Uint8Array(binaryDerString.split('').map(c => c.charCodeAt(0)));
-  return await crypto.subtle.importKey(
-    'spki',
-    binaryDer,
-    { name: 'ECDSA', namedCurve: 'P-256' },
-    true,
-    ['verify']
-  );
-}
-
-// Verificar firma de un token
-async function verifyToken(token) {
-  try {
-    const { usuario, puntos, timestamp, firma } = token;
-    const publicKey = await importPublicKey(publicKeyPem);
-    const data = new TextEncoder().encode(JSON.stringify({ usuario, puntos, timestamp }));
-    const signature = new Uint8Array(atob(firma).split('').map(c => c.charCodeAt(0)));
-    
-    return await crypto.subtle.verify(
-      { name: 'ECDSA', hash: 'SHA-256' },
-      publicKey,
-      signature,
-      data
-    );
-  } catch (error) {
-    console.error('Error verificando firma:', error);
-    return false;
-  }
-}
-
-export { verifyToken };
-  </script>
-  <script type"module">
-    import { verifyToken } from './crypto.js';
-
-// Configuración de IndexedDB
-const dbName = 'SecurePointsDB';
-const storeName = 'points';
-let db;
-
-async function initDB() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(dbName, 1);
-    request.onupgradeneeded = () => {
-      db = request.result;
-      db.createObjectStore(storeName, { keyPath: 'timestamp' });
-    };
-    request.onsuccess = () => {
-      db = request.result;
-      resolve();
-    };
-    request.onerror = () => reject(request.error);
-  });
-}
-
-// Guardar token en IndexedDB
-async function saveToken(token) {
-  const isValid = await verifyToken(token);
-  if (!isValid) {
-    document.getElementById('message').textContent = 'Token inválido, posible manipulación.';
-    return false;
-  }
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction([storeName], 'readwrite');
-    const store = transaction.objectStore(storeName);
-    const request = store.put(token);
-    request.onsuccess = () => resolve(true);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-// Sumar y mostrar puntos válidos
-async function showPoints() {
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction([storeName], 'readonly');
-    const store = transaction.objectStore(storeName);
-    const request = store.getAll();
-    request.onsuccess = async () => {
-      let totalPoints = 0;
-      for (const token of request.result) {
-        if (await verifyToken(token)) {
-          totalPoints += token.puntos;
-        }
-      }
-      document.getElementById('points').textContent = totalPoints;
-      resolve(totalPoints);
-    };
-    request.onerror = () => reject(request.error);
-  });
-}
-
-// Simular juego: pedir token al servidor
-async function simulateGame() {
-  try {
-    const response = await fetch('/api/generate-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ usuario: 'juan123', puntos: 10 })
-    });
-    const token = await response.json();
-    const saved = await saveToken(token);
-    if (saved) {
-      document.getElementById('message').textContent = 'Puntos guardados con éxito!';
-      showPoints();
+    async function importPublicKey(pem) {
+      const binaryDerString = atob(pem.split('\n').slice(1, -2).join(''));
+      const binaryDer = new Uint8Array(binaryDerString.split('').map(c => c.charCodeAt(0)));
+      return await crypto.subtle.importKey(
+        'spki',
+        binaryDer,
+        { name: 'ECDSA', namedCurve: 'P-256' },
+        true,
+        ['verify']
+      );
     }
-  } catch (error) {
-    document.getElementById('message').textContent = 'Error al obtener puntos: ' + error.message;
-  }
-}
 
-// Inicializar
-initDB().then(() => {
-  window.simulateGame = simulateGame;
-  window.showPoints = showPoints;
-  showPoints();
-}).catch(error => {
-  document.getElementById('message').textContent = 'Error al inicializar DB: ' + error.message;
-});
+    async function verifyToken(token) {
+      try {
+        const { usuario, puntos, timestamp, firma } = token;
+        const publicKey = await importPublicKey(publicKeyPem);
+        const data = new TextEncoder().encode(JSON.stringify({ usuario, puntos, timestamp }));
+        const signature = new Uint8Array(atob(firma).split('').map(c => c.charCodeAt(0)));
+        
+        return await crypto.subtle.verify(
+          { name: 'ECDSA', hash: 'SHA-256' },
+          publicKey,
+          signature,
+          data
+        );
+      } catch (error) {
+        console.error('Error verificando firma:', error);
+        return false;
+      }
+    }
+
+    const dbName = 'SecurePointsDB';
+    const storeName = 'points';
+    let db;
+
+    async function initDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(dbName, 1);
+        request.onupgradeneeded = () => {
+          db = request.result;
+          db.createObjectStore(storeName, { keyPath: 'timestamp' });
+        };
+        request.onsuccess = () => {
+          db = request.result;
+          resolve();
+        };
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function saveToken(token) {
+      const isValid = await verifyToken(token);
+      if (!isValid) {
+        document.getElementById('message').textContent = 'Token inválido, posible manipulación.';
+        return false;
+      }
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([storeName], 'readwrite');
+        const store = transaction.objectStore(storeName);
+        const request = store.put(token);
+        request.onsuccess = () => resolve(true);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function showPoints() {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([storeName], 'readonly');
+        const store = transaction.objectStore(storeName);
+        const request = store.getAll();
+        request.onsuccess = async () => {
+          let totalPoints = 0;
+          for (const token of request.result) {
+            if (await verifyToken(token)) {
+              totalPoints += token.puntos;
+            }
+          }
+          document.getElementById('points').textContent = totalPoints;
+          resolve(totalPoints);
+        };
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function simulateGame() {
+      try {
+        const response = await fetch('/api/generate-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: 'juan123', puntos: 10 })
+        });
+        if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+        const token = await response.json();
+        const saved = await saveToken(token);
+        if (saved) {
+          document.getElementById('message').textContent = 'Puntos guardados con éxito!';
+          showPoints();
+        }
+      } catch (error) {
+        document.getElementById('message').textContent = `Error al obtener puntos: ${error.message}`;
+      }
+    }
+
+    async function init() {
+      try {
+        await initDB();
+        document.getElementById('gameButton').addEventListener('click', simulateGame);
+        document.getElementById('showPointsButton').addEventListener('click', showPoints);
+        await showPoints();
+      } catch (error) {
+        document.getElementById('message').textContent = `Error al inicializar DB: ${error.message}`;
+      }
+    }
+
+    init();
   </script>
 </body>
 </html>
